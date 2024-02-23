@@ -8,6 +8,7 @@ user_route.use(express.static('public'));
 
 const userController = require('../controllers/userControllers')
 
-user_route.get('/mail-verification', userController.veryfiyMail)
+user_route.get('/mail-verification', userController.verifyMail);
+
 
 module.exports = user_route;

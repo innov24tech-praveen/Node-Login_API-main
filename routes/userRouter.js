@@ -26,10 +26,20 @@ const upload = multer({
     fileFilter: filefilter
 })
 
+const {signUpValidation, loginValidation} = require('../helpers/validation')
+
 router.post('/register', upload.single('Image'), [
     body('name').notEmpty().withMessage('Name is required'),
     body('email').isEmail().normalizeEmail({ gmail_remove_dots: true }).withMessage('Please enter a valid email'),
     body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long')
-], userController.register);
+], signUpValidation, userController.register);
+
+
+
+router.post('/login', [    
+    body('email').isEmail().normalizeEmail({ gmail_remove_dots: true }).withMessage('Please enter a valid email'),
+    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long')
+], loginValidation,userController.login);
+
 
 module.exports = router;

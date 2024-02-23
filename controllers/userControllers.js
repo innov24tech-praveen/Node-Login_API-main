@@ -5,6 +5,10 @@ const db = require('../config/dbConnection');
 const randomstring = require('randomstring');
 const sendMail = require('../helpers/sendMail')
 
+const jwt = require('jsonwebtoken');
+// const { response } = require('../routes/webRoute');
+const { JWT_SECRET } = process.env;
+
 const register = (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -36,13 +40,13 @@ const register = (req, res) => {
                         (err, result) => {
                             if (err) {
                                 console.error(err);
-                                return res.status(500).send({ 
-                                    msg: err 
+                                return res.status(500).send({
+                                    msg: err
                                 });
                             }
                             let mailSubject = ' Mail Verification';
                             const rendomToken = randomstring.generate();
-                            let content =  '<p>Hii. '+req.body.name+',Please <a href="http://127.0.0.1:3000/mail-verification?token='+token+'">verify<a>Your Mail</p>';
+                            let content = '<p>Hii. ' + req.body.name + ',Please <a href="http://127.0.0.1:3000/mail-verification?token=' + token + '">verify<a>Your Mail</p>';
                             sendMail(req.body.email, mailSubject, content);
                             console.log("Mail Sent Successfully");
                             return res.status(200).send({ msg: 'User registered successfully' });
@@ -54,11 +58,11 @@ const register = (req, res) => {
     );
 };
 
-const veryfiyMail = (req, res) => {
+const verifyMail = (req, res) => {
     var token = req.query.token;
 
-    db.query('SELECT * FROM crm_user WHERE token=? LIMIT 1', [token], function(error, result, fields){
-        if(error){
+    db.query('SELECT * FROM crm_user WHERE token=? LIMIT 1', [token], function (error, result, fields) {
+        if (error) {
             console.log(error.message);
             return res.status(500).send({ msg: error.message });
         }
@@ -84,7 +88,57 @@ const veryfiyMail = (req, res) => {
     });
 }
 
-module.exports = { 
-    register ,
-    veryfiyMail
+
+const login = (req, res) => {
+    const errors = validationResult(req);
+
+    // Check for validation errors
+    if (!errors.isEmpty()) { // Corrected condition
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    // Use parameterized query to prevent SQL injection
+    const query = `SELECT * FROM crm_user WHERE email = ?;`;
+    db.query(query, [req.body.email], (err, result) => {
+        if (err) {
+            return res.status(400).send({ msg: err });
+        }
+        
+        if (!result.length) {
+            return res.status(401).send({ msg: 'Username and password is incorrect' });
+        }
+
+        // Compare password
+        bcrypt.compare(req.body.password, result[0]['password'], (berr, bresult) => {
+            if (berr) {
+                return res.status(400).send({ msg: berr });
+            }
+            if (bresult) {
+                // Passwords match
+                // Here you should generate a JWT token or handle successful login
+                console.log('Login successful');
+                console.log(JWT_SECRET)
+                const token = jwt.sign({ id:result[0]['id'],is_admin:result[0]['is_admin']},JWT_SECRET, {expiresIn: '1hr'});
+                db.query(
+                    `UPDATE crm_user SET last_login = now() WHERE id = '${result[0]['id']}'`
+                );
+                
+                return res.status(200).send({ 
+                    
+                    msg: 'Login successful' ,
+                    token,
+                    user:result[0]
+                }); // Example response
+            } else {
+                // Passwords do not match
+                return res.status(401).send({ msg: 'Username and password is incorrect' });
+            }
+        });
+    });
+};
+
+module.exports = {
+    register,
+    verifyMail,
+    login
 };

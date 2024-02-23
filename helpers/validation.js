@@ -15,3 +15,12 @@ exports.signUpValidation = [
 
     }).withMessage('Please Upload an image type PNG, JPG')
 ];
+
+
+
+exports.loginValidation = [
+ 
+    check('email', 'Please enter a valid email').isEmail().normalizeEmail({ gmail_remove_dots: true }),
+    check('password', 'Password is required minimum 8 length').isLength({ min: 8 }),
+    
+];
